@@ -13,11 +13,6 @@ namespace VacationDomain.Services
     {
         IVacationDbService _vacationDbService;
 
-        public VacationService()
-        {
-            
-        }
-
         public VacationService(IVacationDbService vacationDbService)
         {
             _vacationDbService = vacationDbService;
@@ -68,7 +63,8 @@ namespace VacationDomain.Services
             }
             //check if vacation type exists 
             if(_vacationDbService.GetListOfVacationTypes().Any(x => x.Equals(vacation.VacationType)))
-            {                 throw new ArgumentException("Vacation type does not exist", nameof(vacation.VacationType));
+            {                 
+                throw new ArgumentException("Vacation type does not exist", nameof(vacation.VacationType));
             }
 
             //Check if employee has enoough vacation days
@@ -77,17 +73,15 @@ namespace VacationDomain.Services
             if (employee.VacationAccounts.TryGetValue(vacation.VacationType, out int account) && account < vacationDays)
             {
                 throw new InvalidOperationException("There is not enough vacation days for this vacation type");
-
             }
 
             try
             {
                 return await _vacationDbService.CreateVacationSubmit(vacation);
             }
-            catch (Exception)
+            catch (Exception e)
             {
-
-                throw;
+                throw new Exception($"Error while saving vacation {e.Message}", e);
             }
 
         }
@@ -118,9 +112,26 @@ namespace VacationDomain.Services
             {
                 throw new ArgumentException("HR is not a HR", nameof(hRLogin));
             }
+            if (vacation.IsApproved.HasValue)
+            {
+                throw new InvalidOperationException("Vacation has already been validated or rejected");
+            }
+            if (hRComment?.Length > 100)
+            {
+                throw new ArgumentException("Comment must be smaller than 100", nameof(hRComment));
+            }
             vacation.IsApproved = isApproved;
             vacation.HRComment = hRComment;
-            return await _vacationDbService.SaveVacationSubmit(vacation);
+
+            try
+            {
+                return await _vacationDbService.SaveVacationSubmit(vacation);
+            }
+            catch (Exception e)
+            {
+                throw new Exception($"Error while approving or rejecting vacation {e.Message}", e);
+            }
+
         }
 
     }

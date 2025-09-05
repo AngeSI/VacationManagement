@@ -104,5 +104,25 @@ namespace VacationDomainTests.VacaTionSubmit
 
         }
 
+        [Fact]
+        public async Task ValidateVacationSubmit_AlreadyApproved()
+        {
+            var dbservice = new Mock<IVacationDbService>();
+            var service = new Mock<VacationService>(dbservice.Object);
+
+            string hRLogin = "aopeuli";
+            TestVacationSubmit vacation = new TestVacationSubmit { VacationId = 1, EmployeeLogin = "asilue", ValidationHRLogin = hRLogin, IsApproved = true };
+            TestEmployee hR = new TestEmployee { Login = hRLogin, IsHR = true };
+            string expectedMessage = "Vacation has already been validated or rejected";
+
+            dbservice.Setup(x => x.GetVacationSubmit(vacation.VacationId)).Returns(vacation);
+            dbservice.Setup(x => x.GetEmployee(vacation.ValidationHRLogin)).Returns(hR);
+
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () => await service.Object.ValidateVacation(vacation.VacationId, vacation.ValidationHRLogin, true, string.Empty));
+
+            Assert.Contains(expectedMessage, exception.Message);
+
+        }
+
     }
 }
